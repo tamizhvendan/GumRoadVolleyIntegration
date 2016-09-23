@@ -1,7 +1,7 @@
 #r "packages/FSharp.Data/lib/net40/FSharp.Data.dll"
 
 open FSharp.Data
-let after = "2016-09-22"
+let after = System.Environment.GetEnvironmentVariable("SALES_AFTER")
 let baseUrl = "https://api.gumroad.com"
 let gumRoadToken = System.Environment.GetEnvironmentVariable("GUMROAD_TOKEN")
 let path = sprintf "/v2/sales?after=%s&access_token=%s" after gumRoadToken
@@ -32,18 +32,11 @@ let res =
   |> Http.RequestString
   |> SalesJson.Parse
 
-type VolleyContact = {
-  Email : string
-  FirstName : string
-  LastName : string
-}
-
-let volleyContactImportFormat vollectContact = 
-  sprintf "%s,%s,%s" vollectContact.Email vollectContact.FirstName vollectContact.LastName
+let volleyContactImportFormat (sale : SalesJson.Sale) = 
+  sprintf "%s,%s,%s" sale.Email sale.CustomFields.FirstName sale.CustomFields.LastName
 
 let content = 
   res.Sales
-  |> Seq.map (fun s -> {Email = s.Email; FirstName = s.CustomFields.FirstName; LastName = s.CustomFields.LastName})
   |> Seq.map volleyContactImportFormat
   |> String.concat System.Environment.NewLine
 
