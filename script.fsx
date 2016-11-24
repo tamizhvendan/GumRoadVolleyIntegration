@@ -4,8 +4,10 @@ open FSharp.Data
 let after = System.Environment.GetEnvironmentVariable("SALES_AFTER")
 let baseUrl = "https://api.gumroad.com"
 let gumRoadToken = System.Environment.GetEnvironmentVariable("GUMROAD_TOKEN")
-let path = sprintf "/v2/sales?after=%s&access_token=%s" after gumRoadToken
-let url = sprintf "%s%s" baseUrl
+let path = sprintf "/v2/sales?after=%s" after 
+let url (path : string) = 
+  let queryStringChar = if path.Contains("?") then "&" else "?"
+  sprintf "%s%s%saccess_token=%s" baseUrl path queryStringChar gumRoadToken
 
 [<Literal>]
 let SalesJsonResponse = """
@@ -23,9 +25,17 @@ let SalesJsonResponse = """
 """
 
 type SalesJson = JsonProvider<SalesJsonResponse>
-let printAndReturn x =
-  printfn "%A" x
-  x
+
+
+let rec getSales xs path =
+  let sales = url path |> Http.RequestString |> SalesJson.Parse
+  if sales.NextPageUrl = "" then
+    xs
+  else
+    let agg = Array.concat [sales.Sales;xs] 
+    printfn "%A" sales.NextPageUrl
+    getSales agg sales.NextPageUrl 
+
 
 let res = 
   url path
@@ -36,7 +46,7 @@ let volleyContactImportFormat (sale : SalesJson.Sale) =
   sprintf "%s,%s,%s" sale.Email sale.CustomFields.FirstName sale.CustomFields.LastName
 
 let content = 
-  res.Sales
+  getSales Array.empty path
   |> Seq.map volleyContactImportFormat
   |> String.concat System.Environment.NewLine
 
