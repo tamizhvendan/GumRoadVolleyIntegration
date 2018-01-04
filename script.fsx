@@ -26,11 +26,14 @@ let SalesJsonResponse = """
 
 type SalesJson = JsonProvider<SalesJsonResponse>
 
+let log x =
+  printfn "%A" x
+  x
 
 let rec getSales xs path =
-  let sales = url path |> Http.RequestString |> SalesJson.Parse
+  let sales = url path |> log |> Http.RequestString |> SalesJson.Parse
   if sales.NextPageUrl = "" then
-    xs
+    Array.concat [sales.Sales;xs]
   else
     let agg = Array.concat [sales.Sales;xs] 
     printfn "%A" sales.NextPageUrl
